@@ -7,16 +7,14 @@ from config import db, bcrypt
 class User(db.Model, SerializerMixin):
     __tablename__ = 'users'
 
-        id = db.Column(db.Integer, primary_key=True)
+    id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String, unique=True, nullable=False)
     _password_hash = db.Column(db.String)
     image_url = db.Column(db.String)
     bio = db.Column(db.String)
     
-    # Relationship
     recipes = db.relationship('Recipe', backref='user', cascade='all, delete-orphan')
     
-    # Serialization rules
     serialize_rules = ('-_password_hash', '-recipes.user')
     
     @hybrid_property
@@ -44,4 +42,28 @@ class User(db.Model, SerializerMixin):
 class Recipe(db.Model, SerializerMixin):
     __tablename__ = 'recipes'
     
-    pass
+    id = db.Column(db.Integer, primary_key=True)
+    title = db.Column(db.String, nullable=False)
+    instructions = db.Column(db.String, nullable=False)
+    minutes_to_complete = db.Column(db.Integer)
+    
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    
+    serialize_rules = ('-user.recipes',)
+    
+    @validates('title')
+    def validate_title(self, key, title):
+        if not title:
+            raise ValueError("Title must be present")
+        return title
+    
+    @validates('instructions')
+    def validate_instructions(self, key, instructions):
+        if not instructions:
+            raise ValueError("Instructions must be present")
+        if len(instructions) < 50:
+            raise ValueError("Instructions must be at least 50 characters long")
+        return instructions
+
+    def __repr__(self):
+        return f'<Recipe {self.title}>'
